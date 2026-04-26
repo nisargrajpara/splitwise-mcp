@@ -132,23 +132,7 @@ def register_user_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_current_user() -> Dict[str, Any]:
-        """Get information about the currently authenticated user.
-        
-        Returns detailed profile information for the authenticated user including
-        their ID, name, email, registration status, and profile picture.
-        
-        Returns:
-            Dictionary containing user profile information:
-            - id: User ID
-            - first_name: User's first name
-            - last_name: User's last name
-            - email: User's email address
-            - registration_status: Registration status
-            - picture: Profile picture information
-            
-        Raises:
-            Exception: If authentication fails or API request fails
-        """
+        """Get the current authenticated user's profile (id, name, email, picture)."""
         try:
             result = await client.get_current_user()
             logger.info("Retrieved current user information")
@@ -159,25 +143,7 @@ def register_user_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_user(user_id: int) -> Dict[str, Any]:
-        """Get information about a specific user by ID.
-        
-        Retrieves detailed information about any Splitwise user by their user ID.
-        This can be used to get information about friends or group members.
-        
-        Args:
-            user_id: The ID of the user to retrieve
-            
-        Returns:
-            Dictionary containing user information:
-            - id: User ID
-            - first_name: User's first name
-            - last_name: User's last name
-            - email: User's email address
-            - picture: Profile picture information
-            
-        Raises:
-            Exception: If user not found or API request fails
-        """
+        """Get a user's profile by their ID."""
         try:
             result = await client.get_user(user_id)
             logger.info(f"Retrieved user information for user_id={user_id}")
@@ -283,31 +249,7 @@ def register_expense_tools(mcp: FastMCP) -> None:
         limit: int = 20,
         offset: int = 0
     ) -> Dict[str, Any]:
-        """Get list of expenses with optional filters.
-        
-        Retrieves a list of expenses with various filtering options. Results are
-        paginated using limit and offset parameters.
-        
-        Args:
-            group_id: Filter by group ID (optional)
-            friend_id: Filter by friend user ID (optional)
-            dated_after: Filter expenses dated after this date in ISO 8601 format (optional)
-            dated_before: Filter expenses dated before this date in ISO 8601 format (optional)
-            updated_after: Filter expenses updated after this date in ISO 8601 format (optional)
-            updated_before: Filter expenses updated before this date in ISO 8601 format (optional)
-            limit: Maximum number of expenses to return (default: 20, max: 100)
-            offset: Number of expenses to skip for pagination (default: 0)
-            
-        Returns:
-            Dictionary containing:
-            - expenses: List of expense objects
-            - Each expense includes id, description, cost, date, users, etc.
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If API request fails
-        """
+        """List expenses with optional filters. Dates are ISO 8601 format. Max limit is 100."""
         try:
             # Validate date formats if provided
             if dated_after:
@@ -343,28 +285,7 @@ def register_expense_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_expense(expense_id: int) -> Dict[str, Any]:
-        """Get detailed information about a specific expense.
-        
-        Retrieves complete details for a single expense including all users
-        involved in the split, payment information, and comments.
-        
-        Args:
-            expense_id: The ID of the expense to retrieve
-            
-        Returns:
-            Dictionary containing expense details:
-            - id: Expense ID
-            - description: Expense description
-            - cost: Total cost
-            - currency_code: Currency code
-            - date: Expense date
-            - category: Category information
-            - users: List of users with paid_share and owed_share
-            - comments: List of comments on the expense
-            
-        Raises:
-            Exception: If expense not found or API request fails
-        """
+        """Get full details of a single expense including users, splits, and comments."""
         try:
             result = await client.get_expense(expense_id)
             logger.info(f"Retrieved expense {expense_id}")
@@ -458,19 +379,7 @@ def register_expense_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def delete_expense(expense_id: int) -> Dict[str, Any]:
-        """Delete an expense.
-        
-        Permanently deletes an expense from Splitwise. This action cannot be undone.
-        
-        Args:
-            expense_id: The ID of the expense to delete
-            
-        Returns:
-            Dictionary with success status
-            
-        Raises:
-            Exception: If expense not found or API request fails
-        """
+        """Delete an expense permanently. Use restore_expense to undo."""
         try:
             result = await client.delete_expense(expense_id)
             logger.info(f"Deleted expense {expense_id}")
@@ -500,19 +409,7 @@ def register_group_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_groups() -> Dict[str, Any]:
-        """Get all groups for the current user.
-        
-        Retrieves a list of all groups that the authenticated user is a member of,
-        including group details and member information.
-        
-        Returns:
-            Dictionary containing:
-            - groups: List of group objects
-            - Each group includes id, name, members, simplify_by_default, etc.
-            
-        Raises:
-            Exception: If API request fails
-        """
+        """List all groups the current user belongs to, with members and balances."""
         try:
             result = await client.get_groups()
             logger.info("Retrieved groups list")
@@ -523,26 +420,7 @@ def register_group_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_group(group_id: int) -> Dict[str, Any]:
-        """Get detailed information about a specific group.
-        
-        Retrieves complete details for a single group including all members,
-        balances, and debt information.
-        
-        Args:
-            group_id: The ID of the group to retrieve
-            
-        Returns:
-            Dictionary containing group details:
-            - id: Group ID
-            - name: Group name
-            - members: List of members with balance information
-            - simplify_by_default: Whether debt simplification is enabled
-            - original_debts: List of debts before simplification
-            - simplified_debts: List of simplified debts
-            
-        Raises:
-            Exception: If group not found or API request fails
-        """
+        """Get a group's details including members, balances, and simplified debts."""
         try:
             result = await client.get_group(group_id)
             logger.info(f"Retrieved group {group_id}")
@@ -558,28 +436,8 @@ def register_group_tools(mcp: FastMCP) -> None:
         simplify_by_default: bool = True,
         users: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
-        """Create a new group.
-        
-        Creates a new group with the specified name and settings. You can optionally
-        add initial members when creating the group.
-        
-        Args:
-            name: Group name (required)
-            group_type: Type of group - "home", "trip", "couple", or "other" (default: "other")
-            simplify_by_default: Enable debt simplification (default: True)
-            users: List of initial members with user_id, first_name, last_name, email (optional)
-            
-        Returns:
-            Dictionary containing created group information:
-            - id: Group ID
-            - name: Group name
-            - members: List of group members
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If API request fails
-        """
+        """Create a new group. group_type is one of: home, trip, couple, other.
+        Optionally add initial members via users list with user_id or email+name."""
         try:
             # Validate required parameters
             validate_required(name, "name")
@@ -633,20 +491,7 @@ def register_group_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def delete_group(group_id: int) -> Dict[str, Any]:
-        """Delete a group.
-        
-        Permanently deletes a group from Splitwise. This action cannot be undone.
-        All expenses in the group must be settled before deletion.
-        
-        Args:
-            group_id: The ID of the group to delete
-            
-        Returns:
-            Dictionary with success status
-            
-        Raises:
-            Exception: If group not found, has unsettled expenses, or API request fails
-        """
+        """Delete a group. All expenses must be settled first."""
         try:
             result = await client.delete_group(group_id)
             logger.info(f"Deleted group {group_id}")
@@ -667,26 +512,7 @@ def register_group_tools(mcp: FastMCP) -> None:
         first_name: Optional[str] = None,
         last_name: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Add a user to a group.
-        
-        Adds a user to an existing group. You can specify the user by ID or by
-        email and name (for inviting new users to Splitwise).
-        
-        Args:
-            group_id: The ID of the group
-            user_id: ID of existing Splitwise user to add (optional if email provided)
-            email: Email address of user to add (optional if user_id provided)
-            first_name: First name of user (optional, used with email)
-            last_name: Last name of user (optional, used with email)
-            
-        Returns:
-            Dictionary with success status and updated group information
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If group or user not found, or API request fails
-        """
+        """Add a user to a group by user_id or by email (with first_name/last_name for new invites)."""
         try:
             # Validate group_id
             validate_required(group_id, "group_id")
@@ -737,21 +563,7 @@ def register_group_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def remove_user_from_group(group_id: int, user_id: int) -> Dict[str, Any]:
-        """Remove a user from a group.
-        
-        Removes a user from a group. The user must have a zero balance in the group
-        before they can be removed.
-        
-        Args:
-            group_id: The ID of the group
-            user_id: The ID of the user to remove
-            
-        Returns:
-            Dictionary with success status
-            
-        Raises:
-            Exception: If user has non-zero balance, not found, or API request fails
-        """
+        """Remove a user from a group. User must have zero balance in the group."""
         try:
             result = await client.remove_user_from_group(group_id, user_id)
             logger.info(f"Removed user {user_id} from group {group_id}")
@@ -770,19 +582,7 @@ def register_friend_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_friends() -> Dict[str, Any]:
-        """Get all friends for the current user.
-        
-        Retrieves a list of all friends (users you share expenses with) including
-        balance information for each friend.
-        
-        Returns:
-            Dictionary containing:
-            - friends: List of friend objects
-            - Each friend includes id, first_name, last_name, email, balance, etc.
-            
-        Raises:
-            Exception: If API request fails
-        """
+        """List all friends with their balance information."""
         try:
             result = await client.get_friends()
             logger.info("Retrieved friends list")
@@ -793,26 +593,7 @@ def register_friend_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_friend(user_id: int) -> Dict[str, Any]:
-        """Get detailed information about a specific friend.
-        
-        Retrieves complete details for a single friend including balance information
-        and shared groups.
-        
-        Args:
-            user_id: The ID of the friend to retrieve
-            
-        Returns:
-            Dictionary containing friend details:
-            - id: User ID
-            - first_name: Friend's first name
-            - last_name: Friend's last name
-            - email: Friend's email
-            - balance: Balance information in different currencies
-            - groups: List of shared groups
-            
-        Raises:
-            Exception: If friend not found or API request fails
-        """
+        """Get a friend's details including balances and shared groups."""
         try:
             result = await client.get_friend(user_id)
             logger.info(f"Retrieved friend {user_id}")
@@ -859,27 +640,8 @@ def register_resolution_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def resolve_friend(query: str, threshold: int = 70) -> List[Dict[str, Any]]:
-        """Resolve a natural language friend reference to user ID(s).
-        
-        Uses fuzzy matching to find friends whose names match the provided query.
-        This is useful when you know a friend's name but not their exact user ID.
-        
-        Args:
-            query: Friend name or partial name (e.g., "John", "john smith")
-            threshold: Minimum match score 0-100 (default: 70). Higher values require closer matches.
-            
-        Returns:
-            List of matching friends, each containing:
-            - id: Friend's user ID
-            - name: Friend's full name
-            - match_score: Fuzzy match score (0-100)
-            - additional_info: Dict with email, balance, and other details
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If API request fails
-        """
+        """Fuzzy-match a friend by name. Returns matches with id, name, and match_score.
+        Use this when you know a name but not the user_id."""
         try:
             # Validate query
             validate_required(query, "query")
@@ -907,27 +669,8 @@ def register_resolution_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def resolve_group(query: str, threshold: int = 70) -> List[Dict[str, Any]]:
-        """Resolve a natural language group reference to group ID(s).
-        
-        Uses fuzzy matching to find groups whose names match the provided query.
-        This is useful when you know a group's name but not its exact ID.
-        
-        Args:
-            query: Group name or partial name (e.g., "roommates", "paris trip")
-            threshold: Minimum match score 0-100 (default: 70). Higher values require closer matches.
-            
-        Returns:
-            List of matching groups, each containing:
-            - id: Group ID
-            - name: Group name
-            - match_score: Fuzzy match score (0-100)
-            - additional_info: Dict with members, type, and other details
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If API request fails
-        """
+        """Fuzzy-match a group by name. Returns matches with id, name, and match_score.
+        Use this when you know a group name but not the group_id."""
         try:
             # Validate query
             validate_required(query, "query")
@@ -955,27 +698,8 @@ def register_resolution_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def resolve_category(query: str, threshold: int = 70) -> List[Dict[str, Any]]:
-        """Resolve a natural language category reference to category ID(s).
-        
-        Uses fuzzy matching to find expense categories that match the provided query.
-        This is useful when you want to categorize an expense but don't know the exact category ID.
-        
-        Args:
-            query: Category name (e.g., "food", "groceries", "utilities")
-            threshold: Minimum match score 0-100 (default: 70). Higher values require closer matches.
-            
-        Returns:
-            List of matching categories, each containing:
-            - id: Category ID
-            - name: Category name (may include parent category for subcategories)
-            - match_score: Fuzzy match score (0-100)
-            - additional_info: Dict with subcategories and other details
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If API request fails
-        """
+        """Fuzzy-match an expense category by name (e.g. "food", "utilities").
+        Returns matches with id, name, and match_score. Searches subcategories too."""
         try:
             # Validate query
             validate_required(query, "query")
@@ -1011,27 +735,7 @@ def register_comment_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def create_comment(expense_id: int, content: str) -> Dict[str, Any]:
-        """Create a comment on an expense.
-        
-        Adds a text comment to an existing expense. Comments are visible to all
-        users involved in the expense.
-        
-        Args:
-            expense_id: The ID of the expense to comment on
-            content: The comment text content
-            
-        Returns:
-            Dictionary containing created comment information:
-            - id: Comment ID
-            - content: Comment text
-            - user: User who created the comment
-            - created_at: Timestamp when comment was created
-            
-        Raises:
-            ValidationError: If input validation fails
-            RateLimitError: If rate limit is exceeded
-            Exception: If expense not found or API request fails
-        """
+        """Add a comment to an expense. Visible to all users in the expense."""
         try:
             # Validate expense_id
             validate_required(expense_id, "expense_id")
@@ -1056,22 +760,7 @@ def register_comment_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_comments(expense_id: int) -> Dict[str, Any]:
-        """Get all comments for an expense.
-        
-        Retrieves all comments associated with a specific expense, including
-        comment text, author, and timestamps.
-        
-        Args:
-            expense_id: The ID of the expense
-            
-        Returns:
-            Dictionary containing:
-            - comments: List of comment objects
-            - Each comment includes id, content, user, created_at, etc.
-            
-        Raises:
-            Exception: If expense not found or API request fails
-        """
+        """Get all comments on an expense."""
         try:
             result = await client.get_comments(expense_id)
             logger.info(f"Retrieved comments for expense {expense_id}")
@@ -1082,20 +771,7 @@ def register_comment_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def delete_comment(comment_id: int) -> Dict[str, Any]:
-        """Delete a comment.
-        
-        Permanently deletes a comment from an expense. This action cannot be undone.
-        You can only delete your own comments.
-        
-        Args:
-            comment_id: The ID of the comment to delete
-            
-        Returns:
-            Dictionary with success status
-            
-        Raises:
-            Exception: If comment not found, unauthorized, or API request fails
-        """
+        """Delete a comment. You can only delete your own comments."""
         try:
             result = await client.delete_comment(comment_id)
             logger.info(f"Deleted comment {comment_id}")
@@ -1133,19 +809,7 @@ def register_utility_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_categories() -> Dict[str, Any]:
-        """Get all supported expense categories and subcategories.
-        
-        Retrieves the complete list of expense categories available in Splitwise.
-        This data is cached to minimize API calls.
-        
-        Returns:
-            Dictionary containing:
-            - categories: List of category objects
-            - Each category includes id, name, and optional subcategories
-            
-        Raises:
-            Exception: If API request fails
-        """
+        """Get all expense categories and subcategories. Results are cached."""
         try:
             result = await client.get_categories()
             logger.info("Retrieved categories")
@@ -1156,19 +820,7 @@ def register_utility_tools(mcp: FastMCP) -> None:
     
     @mcp.tool()
     async def get_currencies() -> Dict[str, Any]:
-        """Get all supported currency codes.
-        
-        Retrieves the complete list of currencies supported by Splitwise.
-        This data is cached to minimize API calls.
-        
-        Returns:
-            Dictionary containing:
-            - currencies: List of currency objects
-            - Each currency includes currency_code (e.g., "USD") and unit (e.g., "$")
-            
-        Raises:
-            Exception: If API request fails
-        """
+        """Get all supported currency codes and symbols. Results are cached."""
         try:
             result = await client.get_currencies()
             logger.info("Retrieved currencies")
@@ -1176,224 +828,3 @@ def register_utility_tools(mcp: FastMCP) -> None:
         except Exception as e:
             logger.error(f"Error getting currencies: {e}")
             raise
-
-
-
-# ============================================================================
-
-
-# ============================================================================
-# Arithmetic Tools
-# ============================================================================
-
-def register_arithmetic_tools(mcp: FastMCP) -> None:
-    """Register basic arithmetic calculation tools for expense management."""
-    
-    @mcp.tool()
-    def add(numbers: List[float], decimal_places: int = 2) -> Dict[str, Any]:
-        """Add multiple numbers together.
-        
-        Performs addition on a list of numbers with proper decimal rounding.
-        Useful for calculating totals, summing line items, or adding tax/tip to bills.
-        
-        Examples:
-            - Add line items: add([12.50, 8.75, 15.00]) = 36.25
-            - Add bill + tax + tip: add([85.00, 7.65, 15.30]) = 107.95
-        
-        Args:
-            numbers: List of numbers to add (minimum 1 number)
-            decimal_places: Number of decimal places to round to (default: 2)
-            
-        Returns:
-            Dictionary containing:
-            - result: Sum of all numbers
-            - result_formatted: Formatted string with specified decimal places
-            - operands: Original list of numbers
-            - operation: "addition"
-            
-        Raises:
-            ValueError: If numbers list is empty
-        """
-        if not numbers:
-            raise ValueError("numbers list cannot be empty")
-        
-        result = round(sum(numbers), decimal_places)
-        logger.info(f"Addition: {' + '.join(map(str, numbers))} = {result}")
-        
-        return {
-            "result": result,
-            "result_formatted": f"{result:.{decimal_places}f}",
-            "operands": numbers,
-            "operation": "addition"
-        }
-    
-    @mcp.tool()
-    def subtract(numbers: List[float], decimal_places: int = 2) -> Dict[str, Any]:
-        """Subtract numbers sequentially from left to right.
-        
-        Performs subtraction on a list of numbers: first - second - third - ...
-        Useful for calculating remainders, discounts, or adjustments.
-        
-        Examples:
-            - Calculate change: subtract([100.00, 87.50]) = 12.50
-            - Apply discount: subtract([50.00, 5.00]) = 45.00
-            - Multiple deductions: subtract([100.00, 10.00, 5.00, 2.50]) = 82.50
-        
-        Args:
-            numbers: List of numbers to subtract (minimum 2 numbers)
-            decimal_places: Number of decimal places to round to (default: 2)
-            
-        Returns:
-            Dictionary containing:
-            - result: Result of sequential subtraction
-            - result_formatted: Formatted string with specified decimal places
-            - operands: Original list of numbers
-            - operation: "subtraction"
-            
-        Raises:
-            ValueError: If numbers list has fewer than 2 elements
-        """
-        if len(numbers) < 2:
-            raise ValueError("subtract requires at least 2 numbers")
-        
-        result = numbers[0]
-        for num in numbers[1:]:
-            result -= num
-        result = round(result, decimal_places)
-        
-        logger.info(f"Subtraction: {' - '.join(map(str, numbers))} = {result}")
-        
-        return {
-            "result": result,
-            "result_formatted": f"{result:.{decimal_places}f}",
-            "operands": numbers,
-            "operation": "subtraction"
-        }
-    
-    @mcp.tool()
-    def multiply(numbers: List[float], decimal_places: int = 2) -> Dict[str, Any]:
-        """Multiply multiple numbers together.
-        
-        Performs multiplication on a list of numbers with proper decimal rounding.
-        Useful for calculating totals with quantities, applying rates, or scaling amounts.
-        
-        Examples:
-            - Calculate item total: multiply([12.50, 3]) = 37.50 (price × quantity)
-            - Apply tax rate: multiply([100.00, 1.08]) = 108.00 (amount × 1.08 for 8% tax)
-            - Multiple factors: multiply([10.00, 1.08, 1.15]) = 12.42 (tax + tip)
-        
-        Args:
-            numbers: List of numbers to multiply (minimum 2 numbers)
-            decimal_places: Number of decimal places to round to (default: 2)
-            
-        Returns:
-            Dictionary containing:
-            - result: Product of all numbers
-            - result_formatted: Formatted string with specified decimal places
-            - operands: Original list of numbers
-            - operation: "multiplication"
-            
-        Raises:
-            ValueError: If numbers list has fewer than 2 elements
-        """
-        if len(numbers) < 2:
-            raise ValueError("multiply requires at least 2 numbers")
-        
-        result = numbers[0]
-        for num in numbers[1:]:
-            result *= num
-        result = round(result, decimal_places)
-        
-        logger.info(f"Multiplication: {' × '.join(map(str, numbers))} = {result}")
-        
-        return {
-            "result": result,
-            "result_formatted": f"{result:.{decimal_places}f}",
-            "operands": numbers,
-            "operation": "multiplication"
-        }
-    
-    @mcp.tool()
-    def divide(numbers: List[float], decimal_places: int = 2) -> Dict[str, Any]:
-        """Divide numbers sequentially from left to right.
-        
-        Performs division on a list of numbers: first / second / third / ...
-        Useful for splitting amounts, calculating per-person costs, or finding rates.
-        
-        Examples:
-            - Split bill: divide([120.00, 4]) = 30.00 (total / people)
-            - Calculate unit price: divide([45.00, 3]) = 15.00 (total / quantity)
-            - Multiple divisions: divide([100.00, 2, 5]) = 10.00
-        
-        Args:
-            numbers: List of numbers to divide (minimum 2 numbers)
-            decimal_places: Number of decimal places to round to (default: 2)
-            
-        Returns:
-            Dictionary containing:
-            - result: Result of sequential division
-            - result_formatted: Formatted string with specified decimal places
-            - operands: Original list of numbers
-            - operation: "division"
-            
-        Raises:
-            ValueError: If numbers list has fewer than 2 elements
-            ValueError: If any divisor (after the first number) is zero
-        """
-        if len(numbers) < 2:
-            raise ValueError("divide requires at least 2 numbers")
-        
-        result = numbers[0]
-        for i, num in enumerate(numbers[1:], start=1):
-            if num == 0:
-                raise ValueError(f"Cannot divide by zero (divisor at position {i})")
-            result /= num
-        result = round(result, decimal_places)
-        
-        logger.info(f"Division: {' ÷ '.join(map(str, numbers))} = {result}")
-        
-        return {
-            "result": result,
-            "result_formatted": f"{result:.{decimal_places}f}",
-            "operands": numbers,
-            "operation": "division"
-        }
-    
-    @mcp.tool()
-    def modulo(a: float, b: float, decimal_places: int = 2) -> Dict[str, Any]:
-        """Calculate the remainder of division (modulo operation).
-        
-        Calculates a % b (the remainder when a is divided by b).
-        Useful for checking divisibility or calculating remainders in splits.
-        
-        Examples:
-            - Check remainder: modulo(100.00, 3) = 1.00
-            - Verify even split: modulo(120.00, 4) = 0.00 (divides evenly)
-        
-        Args:
-            a: Dividend (number to be divided)
-            b: Divisor (number to divide by)
-            decimal_places: Number of decimal places to round to (default: 2)
-            
-        Returns:
-            Dictionary containing:
-            - result: Remainder of a % b
-            - result_formatted: Formatted string with specified decimal places
-            - operands: [a, b]
-            - operation: "modulo"
-            
-        Raises:
-            ValueError: If b is zero
-        """
-        if b == 0:
-            raise ValueError("Cannot calculate modulo with zero divisor")
-        
-        result = round(a % b, decimal_places)
-        logger.info(f"Modulo: {a} % {b} = {result}")
-        
-        return {
-            "result": result,
-            "result_formatted": f"{result:.{decimal_places}f}",
-            "operands": [a, b],
-            "operation": "modulo"
-        }
