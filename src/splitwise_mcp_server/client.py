@@ -1,5 +1,6 @@
 """Splitwise API client implementation."""
 
+import asyncio
 import logging
 from typing import Any, Dict, Optional, Union
 import httpx
@@ -9,6 +10,10 @@ from .errors import MCPError, RateLimitError
 from .cache import CacheManager
 
 logger = logging.getLogger(__name__)
+
+RETRYABLE_STATUS_CODES = {500, 502, 503}
+MAX_RETRIES = 1
+RETRY_DELAY = 2.0
 
 
 class SplitwiseClient:
@@ -52,15 +57,8 @@ class SplitwiseClient:
         await self.close()
     
     def _get_headers(self) -> Dict[str, str]:
-        """Get headers for API requests including authentication.
-        
-        Returns:
-            Dictionary of HTTP headers
-        """
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
+        """Get headers for API requests including authentication."""
+        headers = {"Accept": "application/json"}
         headers.update(self.auth_handler.get_auth_headers())
         return headers
     
@@ -246,40 +244,38 @@ class SplitwiseClient:
         )
     
     async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make GET request to Splitwise API.
-        
-        Args:
-            endpoint: API endpoint path (e.g., "/get_current_user")
-            params: Optional query parameters
-            
-        Returns:
-            JSON response as dictionary
-            
-        Raises:
-            RateLimitError: If rate limit is exceeded
-            Exception: If request fails with error details
-        """
+        """Make GET request to Splitwise API with retry for transient failures."""
         url = f"{self.BASE_URL}{endpoint}"
         headers = self._get_headers()
-        
         self._log_request("GET", url, params)
-        
-        try:
-            response = await self.client.get(url, headers=headers, params=params)
-            self._log_response(response)
-            
-            if response.status_code >= 400:
-                # handle_api_error will raise RateLimitError for 429
-                error = self.handle_api_error(response)
-                raise Exception(f"{error.message} (Status: {error.status_code})")
-            
-            return response.json()
-        except RateLimitError:
-            # Re-raise rate limit errors without wrapping
-            raise
-        except httpx.RequestError as e:
-            logger.error(f"Network error: {str(e)}")
-            raise Exception(f"Network error: Could not connect to Splitwise API. Please check your internet connection.\nDetails: {str(e)}")
+
+        last_exception = None
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = await self.client.get(url, headers=headers, params=params)
+                self._log_response(response)
+
+                if response.status_code in RETRYABLE_STATUS_CODES and attempt < MAX_RETRIES:
+                    logger.warning(f"Retryable error {response.status_code}, retrying in {RETRY_DELAY}s...")
+                    await asyncio.sleep(RETRY_DELAY)
+                    continue
+
+                if response.status_code >= 400:
+                    error = self.handle_api_error(response)
+                    raise Exception(f"{error.message} (Status: {error.status_code})")
+
+                return response.json()
+            except RateLimitError:
+                raise
+            except httpx.RequestError as e:
+                if attempt < MAX_RETRIES:
+                    logger.warning(f"Network error, retrying in {RETRY_DELAY}s: {e}")
+                    await asyncio.sleep(RETRY_DELAY)
+                    last_exception = e
+                    continue
+                raise Exception(f"Network error: Could not connect to Splitwise API.\nDetails: {e}")
+
+        raise last_exception or Exception("Request failed after retries")
     
     def _flatten_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Flatten nested data structures for Splitwise API.
@@ -307,124 +303,43 @@ class SplitwiseClient:
         return flattened
     
     async def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make POST request to Splitwise API.
-        
-        Args:
-            endpoint: API endpoint path
-            data: Optional request body data
-            
-        Returns:
-            JSON response as dictionary
-            
-        Raises:
-            RateLimitError: If rate limit is exceeded
-            Exception: If request fails with error details
-        """
+        """Make POST request to Splitwise API with retry for transient failures."""
         url = f"{self.BASE_URL}{endpoint}"
         headers = self._get_headers()
-        
         self._log_request("POST", url)
-        
-        # Flatten data for Splitwise API format
+
         if data:
             data = self._flatten_data(data)
-        
-        try:
-            response = await self.client.post(url, headers=headers, json=data)
-            self._log_response(response)
-            
-            if response.status_code >= 400:
-                # handle_api_error will raise RateLimitError for 429
-                error = self.handle_api_error(response)
-                raise Exception(f"{error.message} (Status: {error.status_code})")
 
-            result = response.json()
-            self._validate_write_response(result)
-            return result
-        except RateLimitError:
-            # Re-raise rate limit errors without wrapping
-            raise
-        except httpx.RequestError as e:
-            logger.error(f"Network error: {str(e)}")
-            raise Exception(f"Network error: Could not connect to Splitwise API. Please check your internet connection.\nDetails: {str(e)}")
+        last_exception = None
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = await self.client.post(url, headers=headers, json=data)
+                self._log_response(response)
 
-    async def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make PUT request to Splitwise API.
-        
-        Args:
-            endpoint: API endpoint path
-            data: Optional request body data
-            
-        Returns:
-            JSON response as dictionary
-            
-        Raises:
-            RateLimitError: If rate limit is exceeded
-            Exception: If request fails with error details
-        """
-        url = f"{self.BASE_URL}{endpoint}"
-        headers = self._get_headers()
-        
-        self._log_request("PUT", url)
-        
-        # Flatten data for Splitwise API format
-        if data:
-            data = self._flatten_data(data)
-        
-        try:
-            response = await self.client.put(url, headers=headers, json=data)
-            self._log_response(response)
-            
-            if response.status_code >= 400:
-                # handle_api_error will raise RateLimitError for 429
-                error = self.handle_api_error(response)
-                raise Exception(f"{error.message} (Status: {error.status_code})")
-            
-            return response.json()
-        except RateLimitError:
-            # Re-raise rate limit errors without wrapping
-            raise
-        except httpx.RequestError as e:
-            logger.error(f"Network error: {str(e)}")
-            raise Exception(f"Network error: Could not connect to Splitwise API. Please check your internet connection.\nDetails: {str(e)}")
-    
-    async def delete(self, endpoint: str) -> Dict[str, Any]:
-        """Make DELETE request to Splitwise API.
-        
-        Args:
-            endpoint: API endpoint path
-            
-        Returns:
-            JSON response as dictionary
-            
-        Raises:
-            RateLimitError: If rate limit is exceeded
-            Exception: If request fails with error details
-        """
-        url = f"{self.BASE_URL}{endpoint}"
-        headers = self._get_headers()
-        
-        self._log_request("DELETE", url)
-        
-        try:
-            response = await self.client.delete(url, headers=headers)
-            self._log_response(response)
-            
-            if response.status_code >= 400:
-                # handle_api_error will raise RateLimitError for 429
-                error = self.handle_api_error(response)
-                raise Exception(f"{error.message} (Status: {error.status_code})")
-            
-            # DELETE may return empty response
-            if response.text:
-                return response.json()
-            return {"success": True}
-        except RateLimitError:
-            # Re-raise rate limit errors without wrapping
-            raise
-        except httpx.RequestError as e:
-            logger.error(f"Network error: {str(e)}")
-            raise Exception(f"Network error: Could not connect to Splitwise API. Please check your internet connection.\nDetails: {str(e)}")
+                if response.status_code in RETRYABLE_STATUS_CODES and attempt < MAX_RETRIES:
+                    logger.warning(f"Retryable error {response.status_code}, retrying in {RETRY_DELAY}s...")
+                    await asyncio.sleep(RETRY_DELAY)
+                    continue
+
+                if response.status_code >= 400:
+                    error = self.handle_api_error(response)
+                    raise Exception(f"{error.message} (Status: {error.status_code})")
+
+                result = response.json()
+                self._validate_write_response(result)
+                return result
+            except RateLimitError:
+                raise
+            except httpx.RequestError as e:
+                if attempt < MAX_RETRIES:
+                    logger.warning(f"Network error, retrying in {RETRY_DELAY}s: {e}")
+                    await asyncio.sleep(RETRY_DELAY)
+                    last_exception = e
+                    continue
+                raise Exception(f"Network error: Could not connect to Splitwise API.\nDetails: {e}")
+
+        raise last_exception or Exception("Request failed after retries")
 
     # User endpoints
     
@@ -673,7 +588,7 @@ class SplitwiseClient:
         Raises:
             Exception: If request fails or user/group not found
         """
-        return await self.post(f"/add_user_to_group", data={
+        return await self.post("/add_user_to_group", data={
             "group_id": group_id,
             **user_data
         })
@@ -693,7 +608,7 @@ class SplitwiseClient:
         Raises:
             Exception: If request fails, user has non-zero balance, or not found
         """
-        return await self.post(f"/remove_user_from_group", data={
+        return await self.post("/remove_user_from_group", data={
             "group_id": group_id,
             "user_id": user_id
         })
