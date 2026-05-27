@@ -13,5 +13,6 @@ if __name__ == "__main__":
     mcp.run(
         transport="streamable-http",
         host="0.0.0.0",
-        port=port
+        port=port,
+        stateless_http=True  # helps with Claude.ai compatibility
     )
