@@ -5,10 +5,10 @@ and exposes it as `mcp` for the entrypoint config: app.py:mcp
 """
 import os
 from splitwise_mcp_server.server import create_server
-from fastmcp_personal_auth import PersonalAuthProvider
+from personal_auth import PersonalAuthProvider
 
 auth = PersonalAuthProvider(
-    base_url=os.environ.get("RAILWAY_PUBLIC_DOMAIN", ""),
+    base_url="https://splitwise-mcp-production.up.railway.app",
 )
 
 mcp = create_server()
@@ -16,8 +16,4 @@ mcp.auth = auth
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    mcp.run(
-        transport="streamable-http",
-        host="0.0.0.0",
-        port=port,
-    )
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
