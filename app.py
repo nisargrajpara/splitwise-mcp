@@ -5,6 +5,7 @@ and exposes it as `mcp` for the entrypoint config: app.py:mcp
 """
 import os
 from splitwise_mcp_server.server import create_server
+from fastmcp import FastMCP
 
 mcp = create_server()
 
@@ -14,5 +15,5 @@ if __name__ == "__main__":
         transport="streamable-http",
         host="0.0.0.0",
         port=port,
-        stateless_http=True  # helps with Claude.ai compatibility
+        stateless_http=True
     )
