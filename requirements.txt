@@ -1,2 +1,1 @@
-splitwise
-splitwise-mcp
+splitwise-mcp-server
