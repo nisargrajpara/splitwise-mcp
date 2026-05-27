@@ -1,2 +1,1 @@
-fastmcp-personal-auth
 fastmcp[auth]
