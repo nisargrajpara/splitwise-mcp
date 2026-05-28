@@ -1,2 +1,5 @@
 [build]
 buildCommand = "pip install ."
+
+[deploy]
+startCommand = "python app.py"
