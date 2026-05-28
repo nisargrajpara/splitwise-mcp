@@ -11,8 +11,7 @@ auth = PersonalAuthProvider(
     base_url="https://splitwise-mcp-production.up.railway.app",
 )
 
-mcp = create_server()
-mcp.auth = auth
+mcp = create_server(auth=auth)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
