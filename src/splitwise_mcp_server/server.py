@@ -92,20 +92,20 @@ async def lifespan(server: FastMCP) -> AsyncIterator[None]:
         logger.info("Splitwise MCP Server shutdown complete")
 
 
-def create_server() -> FastMCP:
+def create_server(auth=None) -> FastMCP:
     """Create and configure the FastMCP server instance.
-    
+
     This function creates the FastMCP server with all Splitwise tools and
     configures the lifespan for proper resource management.
-    
+
     Returns:
         Configured FastMCP server instance
-        
+
     Raises:
         ValueError: If authentication configuration is invalid
     """
     # Create FastMCP server with lifespan
-    mcp = FastMCP("Splitwise MCP Server", lifespan=lifespan)
+    mcp = FastMCP("Splitwise MCP Server", lifespan=lifespan, auth=auth)
     logger.info("FastMCP server created")
     
     # Register all tools
